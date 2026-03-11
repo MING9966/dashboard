@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>群益金融集團 晨間分析儀表板</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#07090f;--card:#0d1117;--card2:#111820;--border:#1a2535;--glow:#1e3d6e;
+  --text:#dce8f5;--sub:#607d99;--muted:#2d4a66;
+  --blue:#3b82f6;--cyan:#06d6c0;--gold:#f0a500;
+  --up:#00c48c;--down:#ff4d6d;
+  --mono:'JetBrains Mono',monospace;--sans:'Noto Sans TC',sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.5;min-height:100vh}
+body::before{content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(59,130,246,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(59,130,246,.025) 1px,transparent 1px);
+  background-size:40px 40px;pointer-events:none;z-index:0}
+.wrap{max-width:1380px;margin:0 auto;padding:20px 16px;position:relative;z-index:1}
+
+/* 標題 */
+.header{text-align:center;padding:20px 0 14px;border-bottom:1px solid var(--border);margin-bottom:16px}
+.header h1{font-size:26px;font-weight:700;letter-spacing:4px;
+  background:linear-gradient(135deg,#dce8f5 0%,var(--cyan) 50%,var(--blue) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:6px}
+.header .meta{font-size:11px;color:var(--sub);font-family:var(--mono);display:flex;align-items:center;justify-content:center;gap:8px}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--up);box-shadow:0 0 8px var(--up);display:inline-block;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* 控制列 */
+.ctrl{display:flex;justify-content:flex-end;gap:10px;margin-bottom:16px}
+.btn{border-radius:7px;padding:8px 18px;font-size:12px;cursor:pointer;font-family:var(--sans);border:1px solid;display:flex;align-items:center;gap:6px;transition:all .2s}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-blue{background:#0d1e40;color:var(--blue);border-color:var(--blue)}
+.btn-blue:hover:not(:disabled){box-shadow:0 0 12px rgba(59,130,246,.3)}
+.btn-green{background:#0a1e12;color:var(--up);border-color:var(--up)}
+.btn-green:hover:not(:disabled){box-shadow:0 0 12px rgba(0,196,140,.3)}
+
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px}
+.kpi{border-radius:10px;padding:14px 16px;position:relative;overflow:hidden;border:1px solid var(--border);background:var(--card)}
+.kpi.hi{background:linear-gradient(135deg,#131a08,#0d1508);border-color:#8b7a10}
+.kpi-bar{position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--blue),transparent);opacity:.5}
+.kpi.hi .kpi-bar{background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+.kpi-label{font-size:11px;color:var(--sub);letter-spacing:1px;margin-bottom:5px}
+.kpi-val{font-family:var(--mono);font-size:20px;font-weight:600}
+.kpi-sub{font-size:11px;font-family:var(--mono);margin-top:3px;color:var(--sub)}
+
+/* 區塊卡片 */
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:16px}
+.sec-title{font-size:12px;font-weight:500;color:var(--sub);letter-spacing:2px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.sec-title::before{content:'';width:3px;height:14px;background:var(--cyan);border-radius:2px;display:inline-block;flex-shrink:0}
+.sec-title.cyan{color:var(--cyan)}
+
+/* 國際股市 */
+.intl-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+.intl-item{text-align:center;padding:10px 6px;border-radius:8px;background:var(--card2);border:1px solid var(--border);transition:border-color .2s}
+.intl-item:hover{border-color:var(--blue)}
+.intl-name{font-size:10px;color:var(--sub);margin-bottom:3px}
+.intl-val{font-size:13px;font-family:var(--mono);font-weight:600;margin-bottom:2px}
+.intl-chg{font-size:10px;font-family:var(--mono)}
+
+/* 兩欄 */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+
+/* 長條圖 */
+.bar-wrap{height:160px;display:flex;align-items:flex-end;justify-content:space-around;gap:16px;padding:0 12px;margin-bottom:8px}
+.bar-group{display:flex;flex-direction:column;align-items:center;flex:1;gap:3px}
+.bar-val{font-size:10px;font-family:var(--mono);margin-bottom:2px}
+.bar{width:55%;border-radius:3px 3px 0 0;min-height:3px;transition:height .8s cubic-bezier(.34,1.56,.64,1)}
+.bar-label{font-size:10px;color:var(--sub)}
+
+/* 指標列 */
+.ind-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--card2)}
+.ind-row:last-child{border-bottom:none}
+.ind-label{font-size:12px;color:var(--sub)}
+.ind-val{font-family:var(--mono);font-size:13px;font-weight:600}
+
+/* 法人個股 */
+.stock-cols{display:flex;gap:20px}
+.stock-col{flex:1}
+.stock-col-title{font-size:11px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:5px}
+.stock-dot{width:7px;height:7px;border-radius:50%;display:inline-block}
+.stock-item{font-size:12px;color:var(--sub);padding:3px 0;font-family:var(--mono)}
+
+/* 新聞 */
+.news-tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;letter-spacing:1px;margin-bottom:5px}
+.news-item{font-size:12px;color:var(--sub);padding:3px 0 3px 12px;border-left:2px solid var(--border);margin-bottom:4px;line-height:1.6}
+
+/* AI 分析 */
+.ai-section{background:linear-gradient(135deg,#0b1420,#080e18);border:1px solid var(--glow);border-radius:10px;padding:20px;margin-bottom:20px;position:relative}
+.ai-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.ai-block-title{font-size:11px;color:var(--cyan);letter-spacing:2px;font-weight:600;margin-bottom:6px;text-transform:uppercase}
+.ai-content{font-size:12px;color:var(--sub);line-height:1.8}
+.prediction-box{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:14px;margin-top:12px}
+.prediction-range{font-family:var(--mono);font-size:22px;font-weight:600;color:var(--gold);margin:6px 0 8px}
+.dir-badge{display:inline-block;padding:3px 14px;border-radius:20px;font-size:11px;font-weight:600;margin-bottom:8px}
+.reason-list{list-style:none;padding:0}
+.reason-list li{font-size:11px;color:var(--sub);padding:3px 0 3px 14px;position:relative}
+.reason-list li::before{content:'▸';position:absolute;left:0;color:var(--cyan)}
+
+/* 推薦個股 */
+.rec-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.rec-card{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:12px;border-left-width:3px;border-left-style:solid}
+.rec-card.tw{border-left-color:var(--cyan)}
+.rec-card.us{border-left-color:var(--gold)}
+.rec-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+.rec-name{font-weight:600;font-size:13px}
+.rec-mkt{font-size:10px;padding:2px 6px;border-radius:4px}
+.rec-mkt.tw{background:rgba(6,214,192,.12);color:var(--cyan)}
+.rec-mkt.us{background:rgba(240,165,0,.12);color:var(--gold)}
+.rec-why{font-size:11px;color:var(--sub);margin-bottom:5px;line-height:1.6}
+.rec-zone{font-size:10px;font-family:var(--mono);color:var(--muted)}
+
+/* 顏色 */
+.up{color:var(--up)}.down{color:var(--down)}.neutral{color:var(--sub)}
+.loading-txt{color:var(--muted);font-size:12px}
+
+/* 等待提示 */
+.ai-placeholder{text-align:center;padding:40px 0;color:var(--muted);font-size:13px}
+
+/* spinner */
+.spin{display:inline-block;width:12px;height:12px;border:2px solid var(--border);border-top-color:var(--cyan);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* RWD */
+@media(max-width:900px){
+  .kpi-grid{grid-template-columns:repeat(3,1fr)}
+  .intl-grid{grid-template-columns:repeat(4,1fr)}
+  .two-col,.ai-grid{grid-template-columns:1fr}
+  .rec-grid{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .intl-grid{grid-template-columns:repeat(2,1fr)}
+  .header h1{font-size:18px;letter-spacing:2px}
+  .stock-cols{flex-direction:column}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- 標題 -->
+  <div class="header">
+    <h1>群益金融集團　晨間分析儀表板</h1>
+    <div class="meta">
+      <span class="dot"></span>
+      <span id="last-upd">載入中...</span>
+      <span style="color:var(--muted)">｜</span>
+      <span id="countdown" style="color:var(--muted)">--s 後自動刷新</span>
+    </div>
+  </div>
+
+  <!-- 控制 -->
+  <div class="ctrl">
+    <button class="btn btn-blue" id="btn-refresh" onclick="refreshAll()">⟳ 刷新資料</button>
+    <button class="btn btn-green" id="btn-ai" onclick="runAI()">✦ Claude AI 盤勢分析</button>
+  </div>
+
+  <!-- KPI -->
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-bar"></div><div class="kpi-label">台股加權指數</div><div class="kpi-val" id="k-twii">—</div><div class="kpi-sub" id="k-twii-c">—</div></div>
+    <div class="kpi"><div class="kpi-bar"></div><div class="kpi-label">OTC 櫃買指數</div><div class="kpi-val" id="k-otc">—</div><div class="kpi-sub" id="k-otc-c">—</div></div>
+    <div class="kpi hi"><div class="kpi-bar"></div><div class="kpi-label">台指期（加權估算）</div><div class="kpi-val" id="k-fut">—</div><div class="kpi-sub">即時加權估算</div></div>
+    <div class="kpi"><div class="kpi-bar"></div><div class="kpi-label">外資期貨淨 OI</div><div class="kpi-val neutral">N/A</div><div class="kpi-sub">需期交所授權</div></div>
+    <div class="kpi"><div class="kpi-bar"></div><div class="kpi-label">今日成交金額（億）</div><div class="kpi-val" id="k-vol">—</div><div class="kpi-sub">台灣證交所</div></div>
+  </div>
+
+  <!-- 國際股市 -->
+  <div class="card">
+    <div class="sec-title">國際股市觀測（即時數據）</div>
+    <div class="intl-grid" id="intl-grid">
+      <div class="intl-item"><div class="intl-name">道瓊工業</div><div class="intl-val loading-txt" id="i-dji">...</div><div class="intl-chg" id="i-dji-c"></div></div>
+      <div class="intl-item"><div class="intl-name">那斯達克</div><div class="intl-val loading-txt" id="i-ixic">...</div><div class="intl-chg" id="i-ixic-c"></div></div>
+      <div class="intl-item"><div class="intl-name">S&amp;P 500</div><div class="intl-val loading-txt" id="i-sp500">...</div><div class="intl-chg" id="i-sp500-c"></div></div>
+      <div class="intl-item"><div class="intl-name">費城半導體</div><div class="intl-val loading-txt" id="i-sox">...</div><div class="intl-chg" id="i-sox-c"></div></div>
+      <div class="intl-item"><div class="intl-name">日經 225</div><div class="intl-val loading-txt" id="i-n225">...</div><div class="intl-chg" id="i-n225-c"></div></div>
+      <div class="intl-item"><div class="intl-name">上海綜合</div><div class="intl-val loading-txt" id="i-ssec">...</div><div class="intl-chg" id="i-ssec-c"></div></div>
+      <div class="intl-item"><div class="intl-name">德國 DAX</div><div class="intl-val loading-txt" id="i-dax">...</div><div class="intl-chg" id="i-dax-c"></div></div>
+    </div>
+  </div>
+
+  <!-- 中段兩欄 -->
+  <div class="two-col">
+    <!-- 三大法人 -->
+    <div class="card" style="margin-bottom:0">
+      <div class="sec-title">三大法人買賣超（億元）</div>
+      <div class="bar-wrap" id="bar-area">
+        <div class="bar-group"><div class="bar-val" id="bv-f">--</div><div class="bar" id="bar-f" style="height:4px;background:var(--blue)"></div><div class="bar-label">外資</div></div>
+        <div class="bar-group"><div class="bar-val" id="bv-i">--</div><div class="bar" id="bar-i" style="height:4px;background:var(--cyan)"></div><div class="bar-label">投信</div></div>
+        <div class="bar-group"><div class="bar-val" id="bv-d">--</div><div class="bar" id="bar-d" style="height:4px;background:var(--gold)"></div><div class="bar-label">自營商</div></div>
+        <div class="bar-group"><div class="bar-val" id="bv-t">--</div><div class="bar" id="bar-t" style="height:4px;background:#a855f7"></div><div class="bar-label">合計</div></div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);font-family:var(--mono);border-top:1px solid var(--border);padding-top:8px;display:flex;gap:20px">
+        <span>融資餘額：N/A</span><span>融券張數：N/A</span>
+      </div>
+    </div>
+
+    <!-- 金融指標 -->
+    <div class="card" style="margin-bottom:0">
+      <div class="sec-title">關鍵金融指標（即時）</div>
+      <div class="ind-row"><span class="ind-label">美元 / 新台幣 (USD/TWD)</span><span class="ind-val" id="ind-twd">—</span></div>
+      <div class="ind-row"><span class="ind-label">紐約輕原油 (WTI)</span><span class="ind-val" id="ind-wti">—</span></div>
+      <div class="ind-row"><span class="ind-label">布蘭特原油 (Brent)</span><span class="ind-val" id="ind-brent">—</span></div>
+      <div class="ind-row"><span class="ind-label">黃金現貨 (Gold)</span><span class="ind-val" id="ind-gold">—</span></div>
+      <div class="ind-row"><span class="ind-label">美元指數 (DXY)</span><span class="ind-val" id="ind-dxy">—</span></div>
+      <div class="ind-row"><span class="ind-label">美指 VIX</span><span class="ind-val" id="ind-vix">—</span></div>
+      <div class="ind-row"><span class="ind-label">美國 10 年期公債殖利率</span><span class="ind-val" id="ind-tnx">—</span></div>
+    </div>
+  </div>
+
+  <!-- 法人焦點 + 新聞 -->
+  <div class="two-col">
+    <div class="card" style="margin-bottom:0">
+      <div class="sec-title">法人焦點個股（前五）</div>
+      <div class="stock-cols">
+        <div class="stock-col">
+          <div class="stock-col-title" style="color:var(--down)"><span class="stock-dot" style="background:var(--down)"></span>買超前五</div>
+          <div id="buy-list"><div class="loading-txt">載入中...</div></div>
+        </div>
+        <div class="stock-col">
+          <div class="stock-col-title" style="color:var(--up)"><span class="stock-dot" style="background:var(--up)"></span>賣超前五</div>
+          <div id="sell-list"><div class="loading-txt">載入中...</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:0">
+      <div class="sec-title">今日新聞頭條</div>
+      <div id="news-area"><div class="loading-txt">按「✦ Claude AI 盤勢分析」後自動產生</div></div>
+    </div>
+  </div>
+
+  <div style="margin-bottom:16px"></div>
+
+  <!-- AI 分析 -->
+  <div class="ai-section">
+    <div class="sec-title cyan">✦ 理財焦點與大盤分析（Claude AI 根據即時數據生成）</div>
+    <div id="ai-area">
+      <div class="ai-placeholder">點擊右上角「✦ Claude AI 盤勢分析」，AI 將根據今日真實數據進行完整分析</div>
+    </div>
+  </div>
+
+</div><!-- /wrap -->
+
+<script>
+// ══════════════════════════════════════
+// 資料抓取設定
+// ══════════════════════════════════════
+const PROXY = 'https://api.allorigins.win/get?url=';
+const TWSE  = 'https://www.twse.com.tw/rwd/zh';
+const YF    = 'https://query1.finance.yahoo.com/v7/finance/quote';
+
+const SYMS = [
+  {sym:'^TWII',  id:'twii',  intl:false},
+  {sym:'^TWOII', id:'otc',   intl:false},
+  {sym:'^DJI',   id:'dji',   intl:true,  name:'道瓊工業'},
+  {sym:'^IXIC',  id:'ixic',  intl:true,  name:'那斯達克'},
+  {sym:'^GSPC',  id:'sp500', intl:true,  name:'S&P 500'},
+  {sym:'^SOX',   id:'sox',   intl:true,  name:'費城半導體'},
+  {sym:'^N225',  id:'n225',  intl:true,  name:'日經 225'},
+  {sym:'000001.SS',id:'ssec',intl:true,  name:'上海綜合'},
+  {sym:'^GDAXI', id:'dax',   intl:true,  name:'德國 DAX'},
+  {sym:'TWD=X',  id:'twd',   intl:false},
+  {sym:'CL=F',   id:'wti',   intl:false},
+  {sym:'BZ=F',   id:'brent', intl:false},
+  {sym:'GC=F',   id:'gold',  intl:false},
+  {sym:'DX-Y.NYB',id:'dxy', intl:false},
+  {sym:'^VIX',   id:'vix',   intl:false},
+  {sym:'^TNX',   id:'tnx',   intl:false},
+];
+
+let Q = {};        // 行情快照
+let INST = null;   // 三大法人
+let BUY_L = [];
+let SELL_L = [];
+let VOL = null;
+let cdSec = 120;
+let cdTimer = null;
+let autoTimer = null;
+
+// ── 工具 ──
+const fmt   = (n, d=2) => n!=null ? Number(n).toLocaleString('zh-TW',{maximumFractionDigits:d}) : '—';
+const pNum  = s => parseInt((s||'').replace(/,/g,''),10)||0;
+const clr   = v => v==null?'var(--sub)':v>=0?'var(--up)':'var(--down)';
+const arr   = v => v>=0?'▲':'▼';
+const $     = id => document.getElementById(id);
+const html  = (id,h,cls)=>{ const el=$(id); if(!el)return; el.innerHTML=h; if(cls)el.className=cls; };
+
+// ── 更新時間 ──
+function tick(){
+  const now = new Date();
+  $('last-upd').textContent = '最後更新：'+now.toLocaleString('zh-TW',{hour12:false});
+}
+
+// ── 倒數計時 ──
+function startCountdown(){
+  cdSec = 120;
+  clearInterval(cdTimer);
+  cdTimer = setInterval(()=>{
+    cdSec--;
+    $('countdown').textContent = cdSec+'s 後自動刷新';
+    if(cdSec<=0) cdSec=120;
+  },1000);
+}
+
+// ══════════════════════════════════════
+// Yahoo Finance
+// ══════════════════════════════════════
+async function fetchYahoo(){
+  const syms = SYMS.map(s=>s.sym).join(',');
+  const url  = `${YF}?symbols=${encodeURIComponent(syms)}&fields=regularMarketPrice,regularMarketChange,regularMarketChangePercent`;
+  try{
+    const r   = await fetch(`${PROXY}${encodeURIComponent(url)}`);
+    const raw = await r.json();
+    const d   = JSON.parse(raw.contents);
+    (d?.quoteResponse?.result||[]).forEach(item=>{
+      const cfg = SYMS.find(s=>s.sym===item.symbol);
+      if(!cfg) return;
+      Q[cfg.id] = { price:item.regularMarketPrice, chg:item.regularMarketChange, pct:item.regularMarketChangePercent, name:cfg.name||cfg.id };
+    });
+    renderYahoo();
+  }catch(e){ console.error('Yahoo:',e); }
+}
+
+function renderYahoo(){
+  // 台股 KPI
+  const tw = Q.twii;
+  if(tw){
+    html('k-twii', fmt(tw.price,0));
+    html('k-twii-c', `${arr(tw.chg)} ${Math.abs(tw.chg||0).toFixed(2)} (${tw.pct?.toFixed(2)}%)`, tw.chg>=0?'kpi-sub up':'kpi-sub down');
+    html('k-fut', fmt(tw.price,0));
+  }
+  const otc = Q.otc;
+  if(otc){
+    html('k-otc', fmt(otc.price,2));
+    html('k-otc-c', `${arr(otc.chg)} ${Math.abs(otc.chg||0).toFixed(2)} (${otc.pct?.toFixed(2)}%)`, otc.chg>=0?'kpi-sub up':'kpi-sub down');
+  }
+  // 國際股市
+  ['dji','ixic','sp500','sox','n225','ssec','dax'].forEach(id=>{
+    const q = Q[id]; if(!q) return;
+    const c = clr(q.chg);
+    $(`i-${id}`).textContent   = fmt(q.price,0);
+    $(`i-${id}`).style.color   = c;
+    $(`i-${id}-c`).textContent = `${arr(q.chg)} ${Math.abs(q.pct||0).toFixed(2)}%`;
+    $(`i-${id}-c`).style.color = c;
+  });
+  // 金融指標
+  const inds = [
+    {id:'twd',el:'ind-twd',d:3},
+    {id:'wti',el:'ind-wti'},
+    {id:'brent',el:'ind-brent'},
+    {id:'gold',el:'ind-gold',d:0},
+    {id:'dxy',el:'ind-dxy'},
+    {id:'vix',el:'ind-vix'},
+    {id:'tnx',el:'ind-tnx',rate:true},
+  ];
+  inds.forEach(({id,el,d=2,rate})=>{
+    const q = Q[id]; if(!q) return;
+    const c = clr(q.chg);
+    const v = `${fmt(q.price,d)}${rate?'%':''} (${arr(q.chg)} ${Math.abs(q.pct||0).toFixed(2)}%)`;
+    html(el, v);
+    $(el).style.color = c;
+  });
+}
+
+// ══════════════════════════════════════
+// 台灣證交所
+// ══════════════════════════════════════
+async function fetchTWSE(){
+  const get = async url => {
+    const r = await fetch(`${PROXY}${encodeURIComponent(url)}`);
+    return JSON.parse((await r.json()).contents);
+  };
+  try{
+    // 三大法人
+    const d1 = await get(`${TWSE}/fund/T86?response=json&selectType=ALL`);
+    if(d1?.stat==='OK'){
+      let f=0,inv=0,d=0;
+      (d1.data||[]).forEach(row=>{
+        if(row[0]==='合計'){
+          f   = pNum(row[4])-pNum(row[6]);
+          inv = pNum(row[10])-pNum(row[12]);
+          d   = pNum(row[2])-pNum(row[3]);
+        }
+      });
+      INST = {f,inv,d,total:f+inv+d};
+      renderBars();
+    }
+    // 外資買超前五
+    const d2 = await get(`${TWSE}/fund/TWT38U?response=json&selectType=B`);
+    if(d2?.stat==='OK'){
+      BUY_L = d2.data?.slice(0,5)||[];
+      renderStocks();
+    }
+    // 外資賣超前五
+    const d3 = await get(`${TWSE}/fund/TWT38U?response=json&selectType=S`);
+    if(d3?.stat==='OK'){
+      SELL_L = d3.data?.slice(0,5)||[];
+      renderStocks();
+    }
+    // 成交量
+    const d4 = await get(`${TWSE}/afterTrading/FMTQIK?response=json`);
+    if(d4?.stat==='OK'){
+      const last = d4.data?.[d4.data.length-1];
+      if(last){ VOL=(pNum(last[2])/1e8).toFixed(0); html('k-vol',VOL+' 億'); }
+    }
+  }catch(e){ console.error('TWSE:',e); }
+}
+
+function renderBars(){
+  if(!INST) return;
+  const {f,inv,d,total} = INST;
+  const max = Math.max(Math.abs(f),Math.abs(inv),Math.abs(d),Math.abs(total),1);
+  const items = [{id:'f',v:f,c:'var(--blue)'},{id:'i',v:inv,c:'var(--cyan)'},{id:'d',v:d,c:'var(--gold)'},{id:'t',v:total,c:'#a855f7'}];
+  items.forEach(({id,v,c})=>{
+    const h = Math.max(Math.abs(v)/max*100,2);
+    const bar = $(`bar-${id}`);
+    if(bar){ bar.style.height=h+'px'; bar.style.background=v>=0?c:'var(--down)'; }
+    const lbl = $(`bv-${id}`);
+    if(lbl){ lbl.textContent=`${v>=0?'+':''}${(v/1e8).toFixed(1)}億`; lbl.style.color=v>=0?'var(--up)':'var(--down)'; }
+  });
+}
+
+function renderStocks(){
+  const mkList = (list,id) => {
+    if(!list.length){ $(id).innerHTML='<div class="loading-txt">載入中...</div>'; return; }
+    $(id).innerHTML = list.map((r,i)=>`<div class="stock-item">${i+1}. ${r[1]}（${r[0]}）</div>`).join('');
+  };
+  mkList(BUY_L,'buy-list');
+  mkList(SELL_L,'sell-list');
+}
+
+// ══════════════════════════════════════
+// 主刷新
+// ══════════════════════════════════════
+async function refreshAll(){
+  $('btn-refresh').disabled = true;
+  $('btn-refresh').innerHTML = '⟳ 更新中...';
+  await Promise.allSettled([fetchYahoo(), fetchTWSE()]);
+  tick();
+  $('btn-refresh').disabled = false;
+  $('btn-refresh').innerHTML = '⟳ 刷新資料';
+  startCountdown();
+}
+
+// ══════════════════════════════════════
+// Claude API 分析
+// ══════════════════════════════════════
+async function runAI(){
+  $('btn-ai').disabled = true;
+  $('btn-ai').innerHTML = '<span class="spin"></span> 分析中...';
+  $('ai-area').innerHTML = '<div class="ai-placeholder"><span class="spin"></span><br><br>AI 正在分析即時市場數據，請稍候 10~20 秒...</div>';
+
+  const snap = [
+    Q.twii  && `台股加權：${fmt(Q.twii.price,0)} (${Q.twii.pct?.toFixed(2)}%)`,
+    Q.otc   && `OTC：${fmt(Q.otc.price,2)} (${Q.otc.pct?.toFixed(2)}%)`,
+    Q.dji   && `道瓊：${fmt(Q.dji.price,0)} (${Q.dji.pct?.toFixed(2)}%)`,
+    Q.ixic  && `那斯達克：${fmt(Q.ixic.price,0)} (${Q.ixic.pct?.toFixed(2)}%)`,
+    Q.sp500 && `S&P500：${fmt(Q.sp500.price,0)} (${Q.sp500.pct?.toFixed(2)}%)`,
+    Q.sox   && `費城半導體：${fmt(Q.sox.price,0)} (${Q.sox.pct?.toFixed(2)}%)`,
+    Q.twd   && `美元/台幣：${Q.twd.price?.toFixed(3)}`,
+    Q.wti   && `WTI：${fmt(Q.wti.price)}`,
+    Q.gold  && `黃金：${fmt(Q.gold.price,0)}`,
+    Q.dxy   && `DXY：${fmt(Q.dxy.price)}`,
+    Q.vix   && `VIX：${fmt(Q.vix.price)}`,
+    Q.tnx   && `美10年債：${fmt(Q.tnx.price)}%`,
+    INST    && `三大法人：合計${(INST.total/1e8).toFixed(1)}億（外資${(INST.f/1e8).toFixed(1)} 投信${(INST.inv/1e8).toFixed(1)} 自營${(INST.d/1e8).toFixed(1)}）`,
+    BUY_L.length  && `外資買超前五：${BUY_L.map(r=>`${r[1]}(${r[0]})`).join('、')}`,
+    SELL_L.length && `外資賣超前五：${SELL_L.map(r=>`${r[1]}(${r[0]})`).join('、')}`,
+    VOL     && `成交量：${VOL}億`,
+  ].filter(Boolean).join('\n');
+
+  const prompt = `你是資深台灣股市晨間分析師。根據以下市場數據，用繁體中文，只回覆JSON（不含markdown符號，不含任何說明文字）：
+
+【今日市場數據】
+${snap}
+
+回覆格式：
+{"fund":"基金焦點2句","insurance":"保險焦點2句","direction":"多方/空方/震盪整理","range":"指數區間例如31,500-32,500","reasons":["原因1（25字內）","原因2","原因3"],"news_tw":["國內重點1","國內重點2"],"news_global":["國際重點1","國際重點2"],"stocks":[{"mkt":"台股","name":"名稱(代號)","why":"推薦原因20字","zone":"操作區間","stop":"停損"},{"mkt":"台股","name":"名稱(代號)","why":"推薦原因20字","zone":"操作區間","stop":"停損"},{"mkt":"美股","name":"名稱(TICKER)","why":"推薦原因20字","zone":"操作區間","stop":"停損"},{"mkt":"美股","name":"名稱(TICKER)","why":"推薦原因20字","zone":"操作區間","stop":"停損"}]}`;
+
+  try{
+    const res  = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+    const data = await res.json();
+    let txt = (data.content||[]).map(c=>c.text||'').join('').replace(/```json|```/g,'').trim();
+    const ai = JSON.parse(txt);
+    renderAI(ai);
+  }catch(e){
+    $('ai-area').innerHTML = `<div class="ai-placeholder" style="color:var(--down)">⚠ 分析失敗，請稍後再試。<br><small>${e.message}</small></div>`;
+    console.error('Claude:',e);
+  }
+  $('btn-ai').disabled = false;
+  $('btn-ai').innerHTML = '✦ Claude AI 盤勢分析';
+}
+
+function renderAI(ai){
+  const dirStyle = ai.direction?.includes('多')
+    ? {bg:'rgba(0,196,140,.1)',c:'var(--up)',b:'var(--up)'}
+    : ai.direction?.includes('空')
+    ? {bg:'rgba(255,77,109,.1)',c:'var(--down)',b:'var(--down)'}
+    : {bg:'rgba(240,165,0,.1)',c:'var(--gold)',b:'var(--gold)'};
+
+  const newsHTML = (tag,list,color) => `
+    <div style="margin-bottom:8px">
+      <span class="news-tag" style="background:${color}22;color:${color}">${tag}</span>
+      ${(list||[]).map(n=>`<div class="news-item">${n}</div>`).join('')}
+    </div>`;
+
+  const stockCard = (s,i) => {
+    const isTW = s.mkt==='台股';
+    return `<div class="rec-card ${isTW?'tw':'us'}">
+      <div class="rec-header">
+        <span class="rec-name">${s.name||''}</span>
+        <span class="rec-mkt ${isTW?'tw':'us'}">${s.mkt}</span>
+      </div>
+      <div class="rec-why">${s.why||''}</div>
+      <div class="rec-zone">操作：${s.zone||''} ｜ 停損：${s.stop||''}</div>
+    </div>`;
+  };
+
+  $('news-area').innerHTML =
+    newsHTML('國內', ai.news_tw,  'var(--blue)') +
+    newsHTML('國際', ai.news_global, 'var(--cyan)');
+
+  $('ai-area').innerHTML = `
+    <div class="ai-grid">
+      <div>
+        <div style="margin-bottom:14px">
+          <div class="ai-block-title">基金焦點</div>
+          <div class="ai-content">${ai.fund||''}</div>
+        </div>
+        <div style="margin-bottom:12px">
+          <div class="ai-block-title">保險焦點</div>
+          <div class="ai-content">${ai.insurance||''}</div>
+        </div>
+        <div class="prediction-box">
+          <div class="ai-block-title">大盤方向預測</div>
+          <span class="dir-badge" style="background:${dirStyle.bg};color:${dirStyle.c};border:1px solid ${dirStyle.b}">${ai.direction||'--'}</span>
+          <div class="prediction-range">${ai.range||'--'}</div>
+          <ul class="reason-list">
+            ${(ai.reasons||[]).map(r=>`<li>${r}</li>`).join('')}
+          </ul>
+        </div>
+      </div>
+      <div>
+        <div class="ai-block-title" style="margin-bottom:10px">核心推薦個股</div>
+        <div class="rec-grid">
+          ${(ai.stocks||[]).map(stockCard).join('')}
+        </div>
+      </div>
+    </div>`;
+}
+
+// ══════════════════════════════════════
+// 初始化
+// ══════════════════════════════════════
+window.onload = () => {
+  refreshAll();
+  autoTimer = setInterval(refreshAll, 120000);
+};
+</script>
+</body>
+</html>
